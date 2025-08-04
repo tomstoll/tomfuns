@@ -47,26 +47,26 @@ def butter_filter(data, fs, l_freq=1, h_freq=None, order=1,
     """
     from warnings import warn
     if l_freq is not None and h_freq is not None:  # bandpass
-        b, a = sig.butter(order, [l_freq, h_freq], btype='band', fs=fs)
+        sos = sig.butter(order, [l_freq, h_freq], btype='band', fs=fs,
+                         output='sos')
     elif l_freq is not None and h_freq is None:  # highpass
-        b, a = sig.butter(order, l_freq, btype='high', fs=fs)
+        sos = sig.butter(order, l_freq, btype='high', fs=fs, output='sos')
     elif l_freq is None and h_freq is not None:  # lowpass
-        b, a = sig.butter(order, h_freq, btype='low', fs=fs)
-    elif l_freq is None and h_freq is None:  # notch
+        sos = sig.butter(order, h_freq, btype='low', fs=fs, output='sos')
+    elif l_freq is None and h_freq is None:  # no filtering
         warn('Lowcut and highcut are None. No filtering is done.')
         if return_mne_params:
-            a = 1
-            b = 1
+            sos = sig.tf2sos(1, 1)  # do no filtering
         else:
             return data
 
-    if return_mne_params:
+    if return_mne_params or data is None:
         params = {'method': 'iir', 'phase': 'forward',
                   'l_freq': l_freq, 'h_freq': h_freq,
-                  'iir_params': {'a': a, 'b': b}}
+                  'iir_params': {'sos': sos}}
         return params
     else:
-        data = sig.lfilter(b, a, data)
+        data = sig.sosfilt(sos, data)
         return data
 
 
