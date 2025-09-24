@@ -20,6 +20,17 @@ classifiers = [
 ]
 license = "MIT"
 license-files = ["LICEN[CS]E*"]
+dependencies = [
+    "numpy",
+    "scipy",
+    "mne",
+	"matplotlib"
+]
+
+[project.optional-dependencies]
+models = [
+    "pyzbc2014"
+]
 
 [project.urls]
 Homepage = "https://github.com/tomstoll/tomfuns"
