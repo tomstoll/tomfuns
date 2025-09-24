@@ -11,8 +11,11 @@ try:
     import pyzbc2014 as zbc
 except ImportError as e:
     raise ImportError(
-        "The tomfuns.models submodule requires pyzbc2014. "
-        "Install it with 'pip install tomfuns[models]'."
+        "The tomfuns.models submodule requires pyzbc2014.\n"
+        "Install it with:\n"
+        "\tpip install "
+        "\"git+https://github.com/tomstoll/tomfuns.git#egg=tomfuns[models]\"\n"
+        "or, use \n\tpip install pyzbc2014\nthen try installing tomfuns again."
     ) from e
 
 
