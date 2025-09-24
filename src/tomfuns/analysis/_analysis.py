@@ -104,7 +104,8 @@ def notch_filt(data, fs, freqs, notch_width):
 
 def drift_correct_epochs(eps, start_trigs, drift_trigs, trial_times):
     """ Modifies epochs in place to correct for clock drift.
-    eps : Epochs object
+    eps : mne Epochs object
+        mne Epochs containing the data to be resampled
     start_trigs : array
         samples each epoch started
     drift_trigs : array
@@ -113,7 +114,7 @@ def drift_correct_epochs(eps, start_trigs, drift_trigs, trial_times):
         the actual time between the start trigger and drift trigger.
         can be a scalar if the time was the same for all trials.
     """
-    from mne import resample
+    from mne.filter import resample
     eps_shape = eps._data.shape
     n_trials = eps_shape[0]
     n_samps = eps_shape[-1]
@@ -124,5 +125,7 @@ def drift_correct_epochs(eps, start_trigs, drift_trigs, trial_times):
         tmp = eps._data[ti].copy()
         tmp = resample(tmp, eps.info['sfreq'], fs_actual,
                        n_jobs=-1, axis=-1)[..., :n_samps]
-        eps._data[ti] = np.pad(tmp, [[0, 0], [0, n_samps-tmp.shape[-1]]],
-                               mode='constant')
+        if tmp.shape[-1] < n_samps:
+            tmp = np.pad(tmp, [[0, 0], [0, n_samps-tmp.shape[-1]]],
+                         mode='constant')
+        eps._data[ti] = tmp

@@ -148,8 +148,11 @@ def gen_fixed_timing_train(fs, n_pulses, dt, dur_trial=1,
     spacing = int(np.round(dt*fs))
     x_pulse = np.zeros(length)
     pulse_indcs = [spacing*pulse_i for pulse_i in range(n_pulses)]
-    x_pulse[pulse_indcs[::2]] = 1
-    x_pulse[pulse_indcs[1::2]] = -1
+    if alternate_polarity:
+        x_pulse[pulse_indcs[::2]] = 1
+        x_pulse[pulse_indcs[1::2]] = -1
+    else:
+        x_pulse[pulse_indcs] = 1
     return x_pulse
 
 
@@ -207,8 +210,8 @@ def gen_pip_train(fs, freq, rate, stim_gen_rms=0.01, n_per=5, dur_trial=1,
 
 def gen_click_train(fs, rate=None, click_dur=100e-6, stim_gen_rms=0.01,
                     dur_trial=1, seed=None, flip_half=None, n_pulses=None,
-                    dt=None, return_timing_train=True,
-                    timing_fn=gen_rand_impluse_train):
+                    return_timing_train=True,
+                    timing='random'):
     """
     A function to generate a click train.
 
@@ -235,9 +238,8 @@ def gen_click_train(fs, rate=None, click_dur=100e-6, stim_gen_rms=0.01,
     return_timing_train : bool, optional
         If True, return the timing train used to generate the click train.
         The default is True.
-    timing_fn : function, optional
-        The function used to place the clicks. Can be used to control if the
-        click train has random (default) or uniform timing.
+    timing : str, optional
+        The type of timing to use. Can be 'random' (default) or 'fixed'.
 
     Returns
     -------
@@ -251,13 +253,31 @@ def gen_click_train(fs, rate=None, click_dur=100e-6, stim_gen_rms=0.01,
 
     """
 
+    if timing not in ['random', 'fixed']:
+        raise ValueError(
+            f"Timing must be either 'random' or 'fixed', got {timing}."
+            )
     click = gen_click(fs, dur_trial, click_dur, stim_gen_rms)
-    timing_fn_args = {'fs': fs, 'dur_trial': dur_trial, 'click_dur': click_dur}
+    timing_fn_args = {'fs': fs, 'dur_trial': dur_trial, 'click_dur': click_dur,
+                      'stim_dur': click_dur}
+    dt = 1/rate  # time between pulses
     for key, value in zip(['rate', 'seed', 'flip_half', 'n_pulses', 'dt'],
                           [rate, seed, flip_half, n_pulses, dt]):
-        if value is not None:
-            timing_fn_args[key] = value
-    x_pulse = timing_fn(**timing_fn_args)
+        timing_fn_args[key] = value
+    if timing == 'random':
+        timing_fn_args = {key: timing_fn_args[key] for key in
+                          ['fs', 'rate', 'dur_trial', 'stim_dur', 'seed',
+                           'flip_half']}
+        x_pulse = gen_rand_impluse_train(**timing_fn_args)
+    else:
+        timing_fn_args['alternate_polarity'] = flip_half
+        if n_pulses is None:
+            n_pulses = int(np.floor(dur_trial/dt))
+            timing_fn_args['n_pulses'] = n_pulses
+        timing_fn_args = {key: timing_fn_args[key]
+                          for key in ['fs', 'n_pulses', 'dt', 'dur_trial',
+                                      'alternate_polarity']}
+        x_pulse = gen_fixed_timing_train(**timing_fn_args)
     click_train = sig.fftconvolve(x_pulse, click)[:int(fs*dur_trial)]
     if return_timing_train:
         return x_pulse, click_train
